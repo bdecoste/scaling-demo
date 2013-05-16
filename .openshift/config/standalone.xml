@@ -62,6 +62,9 @@
 				<suffix value=".yyyy-MM-dd" />
 				<append value="true" />
 			</periodic-rotating-file-handler>
+			<logger category="org.cloudydemo">
+				<level name="FINEST" />
+			</logger>
 			<logger category="com.arjuna">
 				<level name="WARN" />
 			</logger>
