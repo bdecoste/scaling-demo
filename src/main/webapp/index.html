@@ -40,7 +40,7 @@
 	
 	(function poll() {
 		setTimeout(function() {
-			$.ajax({url: "http://localhost:8080/scale/rest/display", success: function(data) {
+			$.ajax({url: "rest/display", success: function(data) {
 				for (var key in data) {
 					console.log(key);
 					console.log(data[key]);
