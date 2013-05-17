@@ -35,7 +35,7 @@ public class HitTracker {
 	private long cacheStartTime;
 
 	// Persist the cache every second
-	private final long CACHE_TIME = 1000;
+	private final long CACHE_TIME = 500;
 
 	private final String COLLECTION = "hitTracker";
 
@@ -55,8 +55,12 @@ public class HitTracker {
 			e.printStackTrace();
 		}
 		mongoDB = mongo.getDB(System.getenv("OPENSHIFT_APP_NAME"));
-		if (mongoDB.authenticate(user, password.toCharArray()) == false) {
-			System.err.println("ERROR - Authentication Failed");
+		if (user != null && password != null) {
+			if (mongoDB.authenticate(user, password.toCharArray()) == false) {
+				throw new RuntimeException("Mongo authentication failed");
+			}
+		} else {
+			LOGGER.warning("No username / password given so not authenticating with Mongo");
 		}
 
 		// Start the caching clock
