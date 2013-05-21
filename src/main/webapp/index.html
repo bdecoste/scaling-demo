@@ -1,11 +1,10 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-<title>OpenShift Scaling</title>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
-<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>OpenShift Scaling</title>
+	<link rel="stylesheet" type="text/css" href="css/scale.css">
 </head>
 <body>
 	<h1>Let's Get Ready to SCALE</h1>
@@ -26,48 +25,10 @@
 		<code>-p 50-500:300 --timeout 5000
 			http://scale-YOUR_DOMAIN.rhcloud.com/</code>
 	</p>
-
-	<script>
-	// Setup d3 canvas
-	var w = 960,
-    h = 500,
-    z = d3.scale.category20c(),
-    i = 0;
-
-	var svg = d3.select("body").append("svg:svg")
-    .attr("width", w)
-    .attr("height", h);
 	
-	(function poll() {
-		setTimeout(function() {
-			$.ajax({url: "rest/display", success: function(data) {
-				for (var key in data) {
-					console.log(key);
-					console.log(data[key]);
-
-					// Render all the hits
-					for (var j=0; j < data[key]; j++) {
-						svg.append("svg:circle")
-					      .attr("cx", Math.random() * w)
-					      .attr("cy", Math.random() * h)
-					      .attr("r", 1e-6)
-					      .style("stroke", z(++i))
-					      .style("stroke-opacity", 1)
-					      .style("fill", "rgba(255, 255, 255, 0)")
-					    .transition()
-					      .duration(Math.random() * 5000)
-					      .ease(Math.sqrt)
-					      .attr("r", 100)
-					      .style("stroke-opacity", 1e-6)
-					      .remove();
-					}
-				}
-
-				// Setup next poll
-				poll();
-			}, dataType: "json"});
-		}, 500);
-	})();
-	</script>
+	<div id="chart"></div>
+	<script type="text/javascript" src="js/jquery.js"></script>
+	<script type="text/javascript" src="js/d3.js"></script>
+	<script type="text/javascript" src="js/scale.js"></script>
 </body>
 </html>

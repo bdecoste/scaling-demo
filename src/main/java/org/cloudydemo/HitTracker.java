@@ -1,13 +1,17 @@
 package org.cloudydemo;
 
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Date;
 import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
+
+import org.bson.types.ObjectId;
+import org.cloudydemo.model.Application;
+import org.cloudydemo.model.Gear;
+import org.cloudydemo.model.Hit;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
@@ -31,6 +35,9 @@ public class HitTracker {
 	// The gear id of the instance this singleton is running on
 	private String gearId;
 
+	// The application name
+	private String appName;
+
 	// Cache start time in milliseconds
 	private long cacheStartTime;
 
@@ -46,6 +53,7 @@ public class HitTracker {
 		String password = System.getenv("OPENSHIFT_MONGODB_DB_PASSWORD");
 		int port = Integer.decode(System.getenv("OPENSHIFT_MONGODB_DB_PORT"));
 		gearId = System.getenv("OPENSHIFT_GEAR_UUID");
+		appName = System.getenv("OPENSHIFT_APP_NAME");
 
 		LOGGER.fine("Connecting with host = " + host + " / port = " + port);
 
@@ -67,10 +75,10 @@ public class HitTracker {
 		cacheStartTime = System.currentTimeMillis();
 	}
 
-	public Map<String, Integer> displayHitsSince(long time) {
+	public Application displayHitsSince(long time) {
 		LOGGER.fine("Displaying hits");
 
-		Map<String, Integer> results = new HashMap<String, Integer>();
+		Application app = new Application(appName);
 
 		try {
 			mongoDB.requestStart();
@@ -83,17 +91,26 @@ public class HitTracker {
 			try {
 				while (cur.hasNext()) {
 					DBObject result = cur.next();
-					String gear = (String) result.get("gear");
+
+					String gearId = (String) result.get("gear");
+
+					// Get or create the gear for the application
+					Gear gear = new Gear(gearId);
+					if (!app.getChildren().contains(gear)) {
+						app.getChildren().add(gear);
+					} else {
+						int index = app.getChildren().indexOf(gear);
+						gear = app.getChildren().get(index);
+					}
+
+					String id = ((ObjectId) result.get("_id")).toString();
+					Date timestamp = new Date(
+							((Long) result.get("time")).longValue());
 					Integer hits = (Integer) result.get("hits");
 
-					// Update the results
-					if (results.containsKey(gear)) {
-						// Add the hits to the existing value
-						results.put(gear, new Integer(results.get(gear)
-								.intValue() + hits.intValue()));
-					} else {
-						results.put(gear, hits);
-					}
+					// Add the hits and timestamp to the gear
+					gear.getChildren().add(
+							new Hit(id, timestamp, hits.intValue()));
 				}
 			} finally {
 				cur.close();
@@ -102,9 +119,9 @@ public class HitTracker {
 			mongoDB.requestDone();
 		}
 
-		LOGGER.fine("Results = " + results);
+		LOGGER.fine("Application = " + app);
 
-		return results;
+		return app;
 	}
 
 	public void persist() {

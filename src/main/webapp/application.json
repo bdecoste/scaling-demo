@@ -1,0 +1,31 @@
+{
+ "name": "My Application",
+ "type": "application",
+ "children": [
+  {
+   "type": "gear",
+   "uuid": "123abc",
+   "children": [
+    {"hits": 3938},
+    {"hits": 3812},
+    {"hits": 6714},
+    {"hits": 743}
+   ]
+  },
+  {
+   "type": "gear",
+   "uuid": "456xyz",
+   "children": [
+    {"hits": 3938},
+    {"hits": 3812},
+    {"hits": 6714},
+    {"hits": 743}
+   ]
+  },
+  {
+   "type": "gear",
+   "uuid": "789fgh",
+   "children": []
+  }
+ ]
+}
