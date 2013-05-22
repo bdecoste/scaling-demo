@@ -14,12 +14,12 @@ Creating your Own
 If you want to create your own copy of this application, just run the
 following command:
 
-  rhc app-create scaleapp jbosseap mongodb-2 -s --from-code https://github.com/matthicksj/scaling-demo.git
+    rhc app-create scaleapp jbosseap mongodb-2 -s --from-code https://github.com/matthicksj/scaling-demo.git
   
 Then, to add 'hits' to your application, hit the following URL:
 
-  http://YOUR_APP/rest/add
+    http://YOUR_APP/rest/add
   
 To drive some simple traffic, you can run something like:
 
-  for i in {1..10000}; do curl -s http://YOUR_APP/rest/add > /dev/null; usleep 50000; done
+    for i in {1..10000}; do curl -s http://YOUR_APP/rest/add > /dev/null; usleep 50000; done
