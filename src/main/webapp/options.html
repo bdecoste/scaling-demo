@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>OpenShift Scaling</title>
+	<link rel="stylesheet" type="text/css" href="css/scale.css">
+</head>
+<body>
+	<div class="background"></div>
+	<h1>Driving Traffic</h1>
+
+	<div id="next_steps">
+		<p>
+			Click <a href="rest/add">here</a> to add a single hit.
+		</p>
+		
+		<p>
+			To drive some traffic locally run:</br>
+			<code id="curl">for i in {1..10000}; do curl -s http://YOUR_APP/rest/add > /dev/null; usleep 50000; done</code>
+		</p>
+		
+		<p>
+			Want to load it up? Go to <a href="http://blitz.io">Blitz.io</a> and
+			do a rush with:</br>
+			<code id="blitz_rush">-p 50-500:300 --timeout 5000 http://YOUR_APP/rest/add</code>
+		</p>
+	</div>
+	
+	<script type="text/javascript" src="js/jquery.js"></script>
+	<script type="text/javascript">
+		var addURL = window.location.protocol + "//" + window.location.host
+
+		// Add the context if it exists
+		var path = window.location.pathname
+		var sections = path.split("/");
+		if (sections.length > 2) {
+			addURL = addURL + "/" + sections[1];
+		}
+
+		// Add rest call
+		addURL = addURL + "/rest/add" 
+
+		$("#blitz_rush").html("-p 50-500:300 --timeout 5000 " + addURL)
+		$("#curl").html("for i in {1..10000}; do curl -s " + addURL + " > /dev/null; usleep 50000; done")
+	</script>
+</body>
+</html>

@@ -295,7 +295,7 @@ function poll() {
 *------------------------- MAIN PROGRAM ------------------------------
 *---------------------------------------------------------------------
 */
-var w = 960, h = 500, link, root = [], application, gears = {};
+var w = 960, h = 550, link, root = [], application, gears = {};
 
 // The time from which to start retrieving results
 var time = 0;
