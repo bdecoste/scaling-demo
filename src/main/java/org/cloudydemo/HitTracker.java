@@ -5,6 +5,8 @@ import java.util.Date;
 import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
+import javax.ejb.Schedule;
+import javax.ejb.Schedules;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 
@@ -42,7 +44,7 @@ public class HitTracker {
 	private long cacheStartTime;
 
 	// Persist the cache every second
-	private final long CACHE_TIME = 500;
+	private final long CACHE_TIME = 1000;
 
 	private final String COLLECTION = "hitTracker";
 
@@ -122,6 +124,11 @@ public class HitTracker {
 		LOGGER.fine("Application = " + app);
 
 		return app;
+	}
+
+	@Schedules({ @Schedule(hour = "*", minute = "*", second = "*/10"), })
+	public void timed() {
+		System.out.println("TIMER!!");
 	}
 
 	public void persist() {

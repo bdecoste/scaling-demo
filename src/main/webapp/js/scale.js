@@ -220,7 +220,7 @@ function poll() {
     }, 1000);
 }
 
-var w = 960, h = 500, node, link, root = [], apps = {}, gears = {}, time = 1369170000000;
+var w = 960, h = 500, node, link, root = [], apps = {}, gears = {}, time = 1369230193895;
 var force = d3.layout.force()
 			.on("tick", tick)
 			.linkDistance(linkDistance)
