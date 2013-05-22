@@ -100,6 +100,10 @@ line.link {
 	
 }
 
+#chart {
+	text-align: center;
+}
+
 code {
 	font-size: 0.7em;
 }

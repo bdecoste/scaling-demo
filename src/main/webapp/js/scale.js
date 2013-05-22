@@ -284,6 +284,9 @@ function poll() {
 				// Setup next poll
 				poll();
 		    },
+		    error : function(error) {
+		    	console.log("JSON Error - " + error);
+		    },
 		    dataType : "json"
 		});
     }, 1000);

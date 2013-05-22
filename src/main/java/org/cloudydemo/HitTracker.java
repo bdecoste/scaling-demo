@@ -108,6 +108,9 @@ public class HitTracker {
 			} finally {
 				cur.close();
 			}
+		} catch (Exception e) {
+			// Try and re-establish the Mongo connection
+			initialize();
 		} finally {
 			mongoDB.requestDone();
 		}
