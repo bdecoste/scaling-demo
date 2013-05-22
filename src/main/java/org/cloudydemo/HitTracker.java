@@ -6,7 +6,6 @@ import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Schedule;
-import javax.ejb.Schedules;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 
@@ -120,7 +119,7 @@ public class HitTracker {
 	/*
 	 * Persist using the Timer service every second
 	 */
-	@Schedules({ @Schedule(hour = "*", minute = "*", second = "*"), })
+	@Schedule(hour = "*", minute = "*", second = "*")
 	public void persist() {
 		if (hits > 0) {
 			LOGGER.fine("Persisting " + hits + " to Mongo for gear " + gearId);
