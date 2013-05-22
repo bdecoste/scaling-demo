@@ -110,6 +110,10 @@ function update() {
     	.style("fill", color)
     	.on("click", click)
     	.call(force.drag);
+    
+    // Update the radius to handle a collapse
+    node.transition()
+    	.attr("r", radius);
 
     // Exit any old nodes
     node.exit().remove();
