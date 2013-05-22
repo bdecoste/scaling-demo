@@ -40,12 +40,6 @@ public class HitTracker {
 	// The application name
 	private String appName;
 
-	// Cache start time in milliseconds
-	private long cacheStartTime;
-
-	// Persist the cache every second
-	private final long CACHE_TIME = 1000;
-
 	private final String COLLECTION = "hitTracker";
 
 	@PostConstruct
@@ -72,9 +66,6 @@ public class HitTracker {
 		} else {
 			LOGGER.warning("No username / password given so not authenticating with Mongo");
 		}
-
-		// Start the caching clock
-		cacheStartTime = System.currentTimeMillis();
 	}
 
 	public Application displayHitsSince(long time) {
@@ -126,11 +117,10 @@ public class HitTracker {
 		return app;
 	}
 
-	@Schedules({ @Schedule(hour = "*", minute = "*", second = "*/10"), })
-	public void timed() {
-		System.out.println("TIMER!!");
-	}
-
+	/*
+	 * Persist using the Timer service every second
+	 */
+	@Schedules({ @Schedule(hour = "*", minute = "*", second = "*"), })
 	public void persist() {
 		LOGGER.fine("Persisting " + hits + " to Mongo for gear " + gearId);
 
@@ -151,19 +141,9 @@ public class HitTracker {
 
 		// Reset the hit counter and the timer
 		hits = 0;
-		cacheStartTime = System.currentTimeMillis();
 	}
 
 	public void addHit() {
 		hits++;
-
-		// See if we need to persist
-		long currentTime = System.currentTimeMillis();
-		LOGGER.fine("Current Time = " + currentTime);
-		LOGGER.fine("Cache Start Time = " + cacheStartTime);
-		LOGGER.fine("Difference = " + (currentTime - cacheStartTime));
-		if (currentTime - cacheStartTime > CACHE_TIME) {
-			persist();
-		}
 	}
 }
