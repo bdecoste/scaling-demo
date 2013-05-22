@@ -256,9 +256,20 @@ function click(d) {
     if (d.children) {
     	d._children = d.children;
     	d.children = null;
+    	
+    	// Remove children from root as well
+    	for (var i = 0; i < d._children.length; i++) {
+    		var child = d._children[i];
+    		root.splice(root.indexOf(child), 1);
+    	}
     } else {
     	d.children = d._children;
     	d._children = null;
+    	
+    	// Add children back to root as well
+    	for (var i = 0; i < d.children.length; i++) {
+    		root.push(d.children[i]);
+    	}
     }
     update();
 }
