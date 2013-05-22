@@ -120,8 +120,7 @@ public class HitTracker {
 	/*
 	 * Persist using the Timer service every second
 	 */
-	@Schedule(hour = "*", minute = "*", second = "*")
-	@Timeout
+	@Schedule(hour = "*", minute = "*", second = "*", persistent = false)
 	public void persist() {
 		if (hits > 0) {
 			LOGGER.fine("Persisting " + hits + " to Mongo for gear " + gearId);
@@ -137,13 +136,19 @@ public class HitTracker {
 				doc.put("time", System.currentTimeMillis());
 
 				coll.insert(doc);
+				
+				// Reset the hit counter
+				hits = 0;
 			} finally {
 				mongoDB.requestDone();
 			}
-
-			// Reset the hit counter
-			hits = 0;
 		}
+	}
+	
+	@Timeout
+	public void timed() {
+		// Just created to handle timeouts on the schedule calls
+		// which can be ignored.
 	}
 
 	public void addHit() {
