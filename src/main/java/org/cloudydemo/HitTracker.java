@@ -122,25 +122,27 @@ public class HitTracker {
 	 */
 	@Schedules({ @Schedule(hour = "*", minute = "*", second = "*"), })
 	public void persist() {
-		LOGGER.fine("Persisting " + hits + " to Mongo for gear " + gearId);
+		if (hits > 0) {
+			LOGGER.fine("Persisting " + hits + " to Mongo for gear " + gearId);
 
-		try {
-			mongoDB.requestStart();
+			try {
+				mongoDB.requestStart();
 
-			DBCollection coll = mongoDB.getCollection(COLLECTION);
+				DBCollection coll = mongoDB.getCollection(COLLECTION);
 
-			BasicDBObject doc = new BasicDBObject();
-			doc.put("gear", gearId);
-			doc.put("hits", hits);
-			doc.put("time", System.currentTimeMillis());
+				BasicDBObject doc = new BasicDBObject();
+				doc.put("gear", gearId);
+				doc.put("hits", hits);
+				doc.put("time", System.currentTimeMillis());
 
-			coll.insert(doc);
-		} finally {
-			mongoDB.requestDone();
+				coll.insert(doc);
+			} finally {
+				mongoDB.requestDone();
+			}
+
+			// Reset the hit counter
+			hits = 0;
 		}
-
-		// Reset the hit counter and the timer
-		hits = 0;
 	}
 
 	public void addHit() {

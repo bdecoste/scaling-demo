@@ -1,50 +1,91 @@
-function merge(newData) {
+/**
+ * Merges the updated JSON structure with the root structure
+ * @param data the delta JSON updates
+ * @returns {Boolean} whether or not a redraw is needed
+ */
+function merge(data) {
 	// Whether or not to redraw the layout
-	var update = false;
+	var redraw = false;
+	
+	// First, flatten the data structure
+	var nodes = flatten(data);
 	
 	// Merge new data, ignoring gear and application updates
 	// since the updates will overwrite their x & y coordinate
 	// and cause the graph to destabilize
-	for (var i=0; i < newData.length; i++) {
-		var newObj = newData[i];
-
-		if (newObj.type == "hit") {
-			root.push(newObj);
-			update = true;
-		} else if (newObj.type == "gear") {
-			if (!(newObj.uuid in gears)) {
-				// Merge the gear itself
-				root.push(newObj);
-	    		gears[newObj.uuid] = newObj;
-	    		update = true;
+	for (var i=0; i < nodes.length; i++) {
+		var node = nodes[i];
+		
+		if (node.type == "hit") {
+			root.push(node);
+			redraw = true;
+		} else if (node.type == "gear") {
+			if (!(node.uuid in gears)) {
+				root.push(node);
+				// Cache the gear
+	    		gears[node.uuid] = node;
+	    		if (application) {
+	    			// This might be a new gear that got created
+	    			if (application.children.indexOf(node) < 0) {
+	    				// The application doesn't have this gear, add it
+	    				application.children.push(node);
+	    			}
+	    		}
+	    		redraw = true;
 			} else {
 				// Merge the hits
-				cacheGear = gears[newObj.uuid];
-				cacheGear.children = cacheGear.children.concat(newObj.children);
+				var cacheGear = gears[node.uuid];
+				cacheGear.children = cacheGear.children.concat(node.children);
 			}
-		} else if (newObj.type == "application") {
-			if (!(newObj.name in apps)) {
-				root.push(newObj);
-				apps[newObj.name] = newObj;
+		} else if (node.type == "application") {
+			if (!application) {
+				root.push(node);
+				application = node;
+				redraw = true;
 			}
 		} 
 	}
-	return update;
+	return redraw;
 }
 
-function update() {
-	nodes = root;
+/**
+ * Returns a flattened list of all the nodes in the supplied
+ * data with the sizes calculated.  Size is based on the total
+ * hit count for the hierarchy below each object.
+ * 
+ * @param data root JSON object to traverse and flatten
+ * @returns {Array} the flattened array of nodes
+ */
+function flatten(data) {
+    var nodes = [];
 	
-    var links = d3.layout.tree().links(nodes);
+    function recurse(node) {
+    	if (node.type == 'gear' || node.type == 'application') {
+    		node.size = node.children.reduce(function(p, v) {return p + recurse(v); }, 0);
+    	} else if (node.type == 'hit') {
+    		node.size = node.count;
+    	}
+		nodes.push(node);
+		return node.size;
+	}
+
+    data.size = recurse(data);
+    
+    return nodes;
+}
+
+/**
+ * Update the d3 force layout based on the root structure.
+ */
+function update() {
+    var links = d3.layout.tree().links(root);
 
     // Update the links
     link = vis.selectAll("line.link")
-    	.data(links);
+    	.data(links, link_key);
 
-    //console.log("Link enter results:");
-    //console.log(link.enter());
-    
-    // Enter any new links
+    // Enter any new links before the gears
+    // This keeps them under the gears
     link.enter().insert("svg:line", ".node")
     	.attr("class", "link")
     	.attr("x1", function(d) { return d.source.x; })
@@ -57,19 +98,9 @@ function update() {
 
     // Update the nodes
     node = vis.selectAll("circle")
-    	.data(nodes, key)
+    	.data(root, key)
     	.style("fill", color);
     
-    //console.log("Update results:");
-    //console.log(node);
-
-    //node.transition()
-    //	.attr("r", radius);
-    
-    
-    //console.log("Enter results:");
-    //console.log(node.enter());
-
     // Enter any new nodes
     node.enter().append("svg:circle")
     	.attr("class", style)
@@ -80,14 +111,11 @@ function update() {
     	.on("click", click)
     	.call(force.drag);
 
-    //console.log("Exit results:");
-    //console.log(node.exit());
-    
     // Exit any old nodes
     node.exit().remove();
     
     // Restart the force layout
-    force.nodes(nodes).links(links).start();
+    force.nodes(root).links(links).start();
 }
 
 function tick() {
@@ -100,6 +128,21 @@ function tick() {
     	.attr("cy", function(d) { return d.y; });
 }
 
+/**
+ * Returns the unique identifier for the given link object.
+ * Uses the key for the target with a prefix.
+ * @param d the link object
+ * @returns the unique identifier
+ */
+function link_key(d) {
+	return "link_" + key(d.target);
+}
+
+/**
+ * Returns the unique identifier for the given object
+ * @param d the object
+ * @returns the unique identifier
+ */
 function key(d) {
 	if (d.type == 'application') {
     	return d.name;
@@ -110,7 +153,11 @@ function key(d) {
     }
 }
 
-// Color leaf nodes orange, and packages white or blue.
+/**
+ * Returns the color for the given object
+ * @param d the object
+ * @returns the color
+ */
 function color(d) {
 	if (d.type == 'hit') {
 		return "#fd8d3c";
@@ -123,6 +170,11 @@ function color(d) {
 	}
 }
 
+/**
+ * Returns the link distance for the given object
+ * @param d the object
+ * @returns the link distance
+ */
 function linkDistance(d) {
 	if (d.target.type == 'gear') {
 		return 150;
@@ -131,7 +183,15 @@ function linkDistance(d) {
 	}
 }
 
-
+/**
+ * Returns the radius for a given object.  If the
+ * object is collapsed, the size is always used.
+ * Otherwise, gear and application size are constant
+ * but hit sizes vary based on the count.
+ * 
+ * @param d the object
+ * @returns the radius
+ */
 function radius(d) {
 	if (d._children) {
 		// If collapsed, show total size
@@ -145,6 +205,15 @@ function radius(d) {
     }
 }
 
+/**
+ * Returns the charge or gravitational pull / push
+ * for a given object.  Application and gear charge
+ * is constant while hit charges vary given their
+ * size (based on count).
+ * 
+ * @param d the object
+ * @returns the charge
+ */
 function charge(d) {
     if (d.type == 'application') {
     	return -100;
@@ -155,11 +224,30 @@ function charge(d) {
     }
 }
 
+/**
+ * Returns the css classes for a given object.
+ * 
+ * @param d the object
+ * @returns the css classes as a string
+ */
 function style(d) {
-    return d.type;
+	if (d.type == 'application' || d.type == 'gear') {
+    	return d.type + " node";
+    } else {
+    	return d.type;
+    }
 }
 
-// Toggle children on click.
+/**
+* Handle an object being clicked.
+* 
+* This method essentially moved the children to a
+* new / hidden structure and then redraws the layout.
+* The hidden structure flags the object as collapsed
+* when redrawn.
+* 
+* @param d the object
+*/
 function click(d) {
     if (d.children) {
     	d._children = d.children;
@@ -171,28 +259,10 @@ function click(d) {
     update();
 }
 
-// Returns a list of all nodes under the root.
-function flatten(data) {
-    var nodes = [];
-	
-    function recurse(node) {
-    	//console.log(node);
-    	if (node.type == 'gear' || node.type == 'application') {
-    		node.size = node.children.reduce(function(p, v) {return p + recurse(v); }, 0);
-    	} else if (node.type == 'hit') {
-    		node.size = node.count;
-    	}
-		nodes.push(node);
-		return node.size;
-	}
-
-    data.size = recurse(data);
-    
-    //console.log("Flattened data:");
-    //console.log(nodes);
-    return nodes;
-}
-
+/**
+* Continuously poll for JSON updates.  Only redraws
+* the layout when necessary.
+*/
 function poll() {
     setTimeout(function() {
     	// Store the time before calling
@@ -201,13 +271,8 @@ function poll() {
 		$.ajax({
 		    url : "rest/display/" + time,
 		    success : function(data) {
-		    	// Add the new data to the root structure
-		    	shouldUpdate = merge(flatten(data));
-		    	//console.log("Merged data:");
-		    	//console.log(root);
-		    	
-		    	// Update it
-		    	if (shouldUpdate) update();
+		    	// Only redraw if necessary
+		    	if (merge(data)) update();
 				
 				// Set the new time to get delta data
 				time = newTime;
@@ -220,16 +285,28 @@ function poll() {
     }, 1000);
 }
 
-var w = 960, h = 500, node, link, root = [], apps = {}, gears = {}, time = 1369230193895;
+
+/**
+*---------------------------------------------------------------------
+*------------------------- MAIN PROGRAM ------------------------------
+*---------------------------------------------------------------------
+*/
+var w = 960, h = 500, link, root = [], application, gears = {};
+
+// The time from which to start retrieving results
+var time = 0;
+
+// Build a force layout
 var force = d3.layout.force()
 			.on("tick", tick)
 			.linkDistance(linkDistance)
 			.charge(charge)
 			.size([ w, h ]);
 
+// Add the svg object to the chart
 var vis = d3.select("#chart").append("svg:svg")
 	.attr("width", w)
 	.attr("height",	h);
 
-// Start polling
+// Start polling for updates
 poll();
