@@ -188,6 +188,22 @@ function linkDistance(d) {
 }
 
 /**
+ * Returns the link strength for the given object.
+ * The link strength between the gear and hits is
+ * stronger than between the application and gear to
+ * allow for the gears to stretch away.
+ * @param d the object
+ * @returns the link strength
+ */
+function linkStrength(d) {
+	if (d.target.type == 'gear') {
+		return 0.75;
+	} else if (d.target.type == 'hit') {
+		return 1;
+	}
+}
+
+/**
  * Returns the radius for a given object.  If the
  * object is collapsed, the size is always used.
  * Otherwise, gear and application size are constant
@@ -220,11 +236,11 @@ function radius(d) {
  */
 function charge(d) {
     if (d.type == 'application') {
-    	return -100;
+    	return -1000;
     } else if (d.type == 'gear') {
-    	return -50;
+    	return -10;
     } else if (d.type == 'hit') {
-    	return d.size * -10;
+    	return -30;
     }
 }
 
@@ -318,6 +334,7 @@ var time = 0;
 var force = d3.layout.force()
 			.on("tick", tick)
 			.linkDistance(linkDistance)
+			.linkStrength(linkStrength)
 			.charge(charge)
 			.size([ w, h ]);
 
