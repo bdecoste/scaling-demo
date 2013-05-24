@@ -70,7 +70,7 @@ function flatten(data) {
 	}
 
     data.size = recurse(data);
-    
+
     return nodes;
 }
 
@@ -100,7 +100,7 @@ function update() {
     node = vis.selectAll("circle")
     	.data(root, key)
     	.style("fill", color);
-    
+
     // Enter any new nodes
     node.enter().append("svg:circle")
     	.attr("class", style)
@@ -110,14 +110,14 @@ function update() {
     	.style("fill", color)
     	.on("click", click)
     	.call(force.drag);
-    
+
     // Update the radius to handle a collapse
     node.transition()
     	.attr("r", radius);
 
     // Exit any old nodes
     node.exit().remove();
-    
+
     // Restart the force layout
     force.nodes(root).links(links).start();
 }
@@ -272,7 +272,7 @@ function click(d) {
     if (d.children) {
     	d._children = d.children;
     	d.children = null;
-    	
+
     	// Remove children from root as well
     	for (var i = 0; i < d._children.length; i++) {
     		var child = d._children[i];
@@ -281,7 +281,7 @@ function click(d) {
     } else {
     	d.children = d._children;
     	d._children = null;
-    	
+
     	// Add children back to root as well
     	for (var i = 0; i < d.children.length; i++) {
     		root.push(d.children[i]);
@@ -298,21 +298,22 @@ function poll() {
     setTimeout(function() {
     	// Store the time before calling
     	newTime = Date.now();
-    	
+
 		$.ajax({
 		    url : "rest/display/" + time,
 		    success : function(data) {
 		    	// Only redraw if necessary
 		    	if (merge(data)) update();
 				
-				// Set the new time to get delta data
-				time = newTime;
-	
-				// Setup next poll
-				poll();
+          // Set the new time to get delta data
+          time = newTime;
+
+          // Setup next poll
+          poll();
 		    },
 		    error : function(error) {
-		    	console.log("JSON Error - " + error);
+          // Setup another poll
+          poll();
 		    },
 		    dataType : "json"
 		});
