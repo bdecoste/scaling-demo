@@ -221,7 +221,7 @@ function radius(d) {
     } else if (d.type == 'gear') {
     	return 15;
     } else if (d.type == 'hit'){
-    	return d.size;
+    	return Math.log(d.size);
     }
 }
 
