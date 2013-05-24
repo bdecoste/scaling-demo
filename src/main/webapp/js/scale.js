@@ -181,7 +181,7 @@ function color(d) {
  */
 function linkDistance(d) {
 	if (d.target.type == 'gear') {
-		return 150;
+		return 100;
 	} else if (d.target.type == 'hit') {
 		return 50;
 	}
@@ -336,6 +336,7 @@ var force = d3.layout.force()
 			.on("tick", tick)
 			.linkDistance(linkDistance)
 			.linkStrength(linkStrength)
+      .gravity(0.5)
 			.charge(charge)
 			.size([ w, h ]);
 
