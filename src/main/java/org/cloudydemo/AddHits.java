@@ -22,7 +22,7 @@ public class AddHits {
 
 		// Generate a random length pause to simulate work
 		try {
-			Thread.sleep((long) Math.random() * 1000);
+			Thread.sleep((long) Math.random() * 3000);
 		} catch (InterruptedException e) {
 			// Ignore
 		}
