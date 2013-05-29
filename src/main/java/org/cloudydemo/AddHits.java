@@ -19,14 +19,6 @@ public class AddHits {
 	@Produces(MediaType.TEXT_PLAIN)
 	public String addHit() {
 		hitTracker.addHit();
-
-		// Generate a random length pause to simulate work
-		try {
-			Thread.sleep((long) Math.random() * 3000);
-		} catch (InterruptedException e) {
-			// Ignore
-		}
-
 		return "Success";
 	}
 }
