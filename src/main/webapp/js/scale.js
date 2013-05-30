@@ -181,7 +181,7 @@ function color(d) {
  */
 function linkDistance(d) {
 	if (d.target.type == 'gear') {
-		return 150;
+		return 200;
 	} else if (d.target.type == 'hit') {
 		return 50;
 	}
@@ -197,9 +197,9 @@ function linkDistance(d) {
  */
 function linkStrength(d) {
 	if (d.target.type == 'gear') {
-		return 0.75;
+		return 0.3;
 	} else if (d.target.type == 'hit') {
-		return 1;
+		return 0.5;
 	}
 }
 
@@ -215,7 +215,7 @@ function linkStrength(d) {
 function radius(d) {
 	if (d._children) {
 		// If collapsed, show total size
-		return d.size;
+		return Math.log(d.size) * 10;
 	} else if (d.type == 'application') {
     	return 25;
     } else if (d.type == 'gear') {
@@ -236,11 +236,11 @@ function radius(d) {
  */
 function charge(d) {
     if (d.type == 'application') {
-    	return -1000;
+    	return 0;
     } else if (d.type == 'gear') {
-    	return -10;
+    	return -1000;
     } else if (d.type == 'hit') {
-    	return -30;
+    	return -200;
     }
 }
 
