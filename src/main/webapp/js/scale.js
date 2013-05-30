@@ -183,7 +183,7 @@ function linkDistance(d) {
 	if (d.target.type == 'gear') {
 		return 200;
 	} else if (d.target.type == 'hit') {
-		return 50;
+		return 20;
 	}
 }
 
@@ -199,7 +199,7 @@ function linkStrength(d) {
 	if (d.target.type == 'gear') {
 		return 0.3;
 	} else if (d.target.type == 'hit') {
-		return 0.9;
+		return 1.0;
 	}
 }
 
@@ -221,7 +221,9 @@ function radius(d) {
     } else if (d.type == 'gear') {
     	return 15;
     } else if (d.type == 'hit'){
-    	return Math.log(d.size);
+    	var result = Math.log(d.size);
+      if (result == 0) result = 1;
+      return result;
     }
 }
 
@@ -238,7 +240,7 @@ function charge(d) {
     if (d.type == 'application') {
     	return 0;
     } else if (d.type == 'gear') {
-    	return -1000;
+    	return -500;
     } else if (d.type == 'hit') {
     	return -75;
     }
@@ -342,6 +344,7 @@ var force = d3.layout.force()
 			.on("tick", tick)
 			.linkDistance(linkDistance)
 			.linkStrength(linkStrength)
+      .friction(0.5)
       .gravity(0.7)
 			.charge(charge)
 			.size([ w, h ]);
@@ -353,3 +356,5 @@ var vis = d3.select("#chart").append("svg:svg")
 
 // Start polling for updates
 poll();
+
+//pollLocal(1);  // To debug with local data files in Firefox
