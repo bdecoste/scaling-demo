@@ -199,7 +199,7 @@ function linkStrength(d) {
 	if (d.target.type == 'gear') {
 		return 0.3;
 	} else if (d.target.type == 'hit') {
-		return 0.5;
+		return 0.9;
 	}
 }
 
@@ -240,7 +240,7 @@ function charge(d) {
     } else if (d.type == 'gear') {
     	return -1000;
     } else if (d.type == 'hit') {
-    	return -200;
+    	return -75;
     }
 }
 
@@ -320,6 +320,12 @@ function poll() {
     }, 1000);
 }
 
+function pollLocal(selection) {
+		$.getJSON('data' + selection + '.json', function(data) {
+		    	// Only redraw if necessary
+		    	if (merge(data)) update();
+    });	
+}
 
 /**
 *---------------------------------------------------------------------
@@ -336,7 +342,7 @@ var force = d3.layout.force()
 			.on("tick", tick)
 			.linkDistance(linkDistance)
 			.linkStrength(linkStrength)
-      .gravity(0.5)
+      .gravity(0.7)
 			.charge(charge)
 			.size([ w, h ]);
 
