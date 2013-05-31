@@ -123,7 +123,7 @@ public class HitTracker {
 	/*
 	 * Persist using the Timer service every second
 	 */
-	@Schedule(hour = "*", minute = "*", second = "*", persistent = false)
+	@Schedule(hour = "*", minute = "*", second = "*/2", persistent = false)
 	public void persist() {
 		if (hits > 0) {
 			LOGGER.fine("Persisting " + hits + " to Mongo for gear " + gearId);
