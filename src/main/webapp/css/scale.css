@@ -84,14 +84,28 @@ h4 {
  *********************************************/
 circle.gear,circle.application,circle.hit {
 	cursor: pointer;
-	stroke: #3182bd;
+	stroke: #274257;
 	stroke-width: 1.5px;
 }
 
 line.link {
 	fill: none;
-	stroke: #9ecae1;
+	stroke: #274257;
 	stroke-width: 1.5px;
+}
+
+text {
+	font-family: "Overpass", sans-serif;
+	font-weight: bold;
+  font-size: 0.7em;
+}
+
+.application + text {
+  font-size: 1em;
+}
+
+text:hover {
+  cursor: pointer;
 }
 
 #next_steps {

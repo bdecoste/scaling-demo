@@ -1,0 +1,8 @@
+{"name":"scaledemo",
+  "type":"application",
+  "children":[
+    {"uuid":"d4859704c89411e2b06a12313d08e694","type":"gear","children":[
+      {"id":"51a67865e4b053e4632c9537","type":"hit","timestamp":"May 29, 2013 5:51:33 PM","count":96}
+    ]}
+  ]
+}

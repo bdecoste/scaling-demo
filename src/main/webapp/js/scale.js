@@ -6,16 +6,16 @@
 function merge(data) {
   // Whether or not to redraw the layout
   var redraw = false;
-  
+
   // First, flatten the data structure
   var nodes = flatten(data);
-  
+
   // Merge new data, ignoring gear and application updates
   // since the updates will overwrite their x & y coordinate
   // and cause the graph to destabilize
   for (var i=0; i < nodes.length; i++) {
     var node = nodes[i];
-    
+
     if (node.type == "hit") {
       root.push(node);
       redraw = true;
@@ -43,7 +43,7 @@ function merge(data) {
         application = node;
         redraw = true;
       }
-    } 
+    }
   }
   return redraw;
 }
@@ -52,13 +52,13 @@ function merge(data) {
  * Returns a flattened list of all the nodes in the supplied
  * data with the sizes calculated.  Size is based on the total
  * hit count for the hierarchy below each object.
- * 
+ *
  * @param data root JSON object to traverse and flatten
  * @returns {Array} the flattened array of nodes
  */
 function flatten(data) {
     var nodes = [];
-  
+
     function recurse(node) {
       if (node.type == 'gear' || node.type == 'application') {
         node.size = node.children.reduce(function(p, v) {return p + recurse(v); }, 0);
@@ -84,52 +84,58 @@ function update() {
     link = vis.selectAll("line.link")
       .data(links, link_key);
 
-    // Enter any new links before the gears
-    // This keeps them under the gears
-    link.enter().insert("svg:line", ".node")
-      .attr("class", "link")
-      .attr("x1", function(d) { return d.source.x; })
-      .attr("y1", function(d) { return d.source.y; })
-      .attr("x2", function(d) { return d.target.x; })
-      .attr("y2", function(d) { return d.target.y; });
+    // Enter any new links before the groups
+    // This keeps them under the gears / apps
+    link.enter().insert("line", "g")
+      .attr("class", "link");
 
     // Exit any old links
     link.exit().remove();
 
-    // Update the nodes
-    node = vis.selectAll("circle")
-      .data(root, key)
-      .style("fill", color);
+    // Select all the groups
+    groups = vis.selectAll("g")
+        .data(root, key);
 
-    // Enter any new nodes
-    node.enter().append("svg:circle")
-      .attr("class", style)
-      .attr("cx", function(d) { return d.x; })
-      .attr("cy", function(d) { return d.y; })
-      .attr("r", radius)
-      .style("fill", color)
-      .on("click", click)
-      .call(force.drag);
+    // Insert the wrapper groups
+    group = groups.enter()
+      .append("g")
+        .on("click", click)
+        .call(force.drag);
 
-    // Update the radius to handle a collapse
-    node.transition()
-      .attr("r", radius);
+    // Append circles to the wrapper
+    group.append("circle");
+
+    // Label the gears and applications
+    group.filter(function(d) { return d.type != "hit" })
+      .append("text")
+        .attr("dy", ".3em")
+        .style("text-anchor", "middle")
+        .text(function(d) { return d.type == "application" ? "App": "Gear" });
 
     // Exit any old nodes
-    node.exit().remove();
+    groups.exit().remove();
+
+    // Update the circles to handle click events
+    // that change color / radius
+    vis.selectAll("circle")
+      .data(root, key)
+      .attr("r", radius)
+      .style("fill", color)
+      .attr("class", style);
 
     // Restart the force layout
     force.nodes(root).links(links).start();
 }
 
 function tick() {
+    // Position the link
     link.attr("x1", function(d) { return d.source.x; })
       .attr("y1", function(d) { return d.source.y; })
       .attr("x2", function(d) { return d.target.x; })
       .attr("y2", function(d) { return d.target.y; });
 
-    node.attr("cx", function(d) { return d.x; })
-      .attr("cy", function(d) { return d.y; });
+    // Position the group element
+    groups.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
 }
 
 /**
@@ -197,7 +203,7 @@ function linkDistance(d) {
  */
 function linkStrength(d) {
   if (d.target.type == 'gear') {
-    return 0.3;
+    return 0.9;
   } else if (d.target.type == 'hit') {
     return 1.0;
   }
@@ -217,9 +223,9 @@ function radius(d) {
     // If collapsed, show total size
     return Math.log(d.size) * 10;
   } else if (d.type == 'application') {
-      return 25;
+      return 40;
     } else if (d.type == 'gear') {
-      return 15;
+      return 20;
     } else if (d.type == 'hit'){
       var result = Math.log(d.size);
       if (result == 0) result = 1;
@@ -271,7 +277,7 @@ function style(d) {
 * @param d the object
 */
 function click(d) {
-    function recurse_remove(node) {
+    function click_remove(node) {
       if (node.children) {
         node._children = node.children;
         node.children = null;
@@ -281,12 +287,12 @@ function click(d) {
         for (var i = 0; i < node._children.length; i++) {
           var child = node._children[i];
           root.splice(root.indexOf(child), 1);
-          recurse_remove(child);
+          click_remove(child);
         }
       }
     }
 
-    function recurse_add(node) {
+    function click_add(node) {
       if (node._children) {
         node.children = node._children;
         node._children = null;
@@ -296,15 +302,15 @@ function click(d) {
         for (var i = 0; i < node.children.length; i++) {
           var child = node.children[i];
           root.push(child);
-          recurse_add(child);
+          click_add(child);
         }
       }
     }
 
     if (d.children) {
-      recurse_remove(d);
+      click_remove(d);
     } else {
-      recurse_add(d);
+      click_add(d);
     }
     update();
 }
@@ -362,16 +368,17 @@ var force = d3.layout.force()
       .linkDistance(linkDistance)
       .linkStrength(linkStrength)
       .friction(0.5)
-      .gravity(0.9)
+      .gravity(0.8)
       .charge(charge)
       .size([ w, h ]);
 
 // Add the svg object to the chart
-var vis = d3.select("#chart").append("svg:svg")
-  .attr("width", w)
-  .attr("height", h);
+var vis = d3.select("#chart").append("svg")
+     .attr("width", w)
+     .attr("height", h)
+   .append("g");
 
 // Start polling for updates
 poll();
 
-//pollLocal(4);  // To debug with local data files in Firefox
+//pollLocal(0);  // To debug with local data files in Firefox
