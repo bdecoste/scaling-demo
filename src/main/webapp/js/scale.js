@@ -1,3 +1,72 @@
+function process(gear_callback, hit_callback, app) {
+  var updated = false;
+
+  if (!app) app = application;
+
+  for (var i = 0; i < app.children.length; i++) {
+    var gear = app.children[i];
+
+    if (gear_callback) {
+      updated = gear_callback(gear, i) || updated;
+    }
+
+    for (var j = 0; j < gear.children.length; j++) {
+      var hit = gear.children[j];
+
+      if (hit_callback) {
+       updated = hit_callback(hit, gear, j) || updated;
+      }
+    }
+  }
+
+  return updated;
+}
+
+function prune(gear_callback, hit_callback) {
+  var updated = false;
+
+  for (var i = 0; i < application.children.length; i++) {
+    var gear = application.children[i];
+
+    // Process the hits first in case they influence
+    // the gear pruning
+    for (var j = 0; j < gear.children.length; j++) {
+      var hit = gear.children[j];
+
+      if (hit_callback) {
+        if (hit_callback(hit, gear, j)) {
+          gear.children.splice(j, 1);
+          j--;
+
+          // Remove the hit from the cache
+          delete hits[hit.id];
+
+          updated = true;
+        }
+      }
+    }
+
+    // Now prune the gears
+    if (gear_callback) {
+      if (gear_callback(gear, i)) {
+        application.children.splice(i, 1);
+        i--;
+
+        // Remove the gear from the cache
+        delete gears[gear.uuid];
+
+        updated = true;
+      }
+    }
+  }
+
+  return updated;
+}
+
+function processHits(hit_callback) {
+  process(null, hit_callback);
+}
+
 /**
  * Merges the updated JSON structure with the root structure
  * @param data the delta JSON updates
@@ -5,108 +74,100 @@
  */
 function merge(data) {
   // Whether or not to redraw the layout
-  var redraw = false;
+  var updated = updateCache(data);
+
+  // Now prune out any old hits
+  var pruned = prune(
+    function(gear) { 
+      return gear.children == 0;
+    },
+    function(hit) {
+      return (Date.now() - 1000*60*pruneTime) > new Date(hit.timestamp).getTime();
+    }
+  );
+
+  // Re-calculate the object sizes
+  calculateSizes();
 
   // First, flatten the data structure
-  var nodes = flatten(data);
+  root = flatten();
 
-  // Merge new data, ignoring gear and application updates
-  // since the updates will overwrite their x & y coordinate
-  // and cause the graph to destabilize
-  for (var i=0; i < nodes.length; i++) {
-    var node = nodes[i];
+  // Return whether to redraw
+  return updated || pruned;
+}
 
-    if (node.type == "hit") {
-      root.push(node);
-      redraw = true;
-    } else if (node.type == "gear") {
-      if (!(node.uuid in gears)) {
-        root.push(node);
-        // Cache the gear
-        gears[node.uuid] = node;
-        if (application) {
-          // This might be a new gear that got created
-          if (application.children.indexOf(node) < 0) {
-            // The application doesn't have this gear, add it
-            application.children.push(node);
-          }
-        }
-        redraw = true;
-      } else {
-        // Merge the hits
-        var cacheGear = gears[node.uuid];
-        cacheGear.children = cacheGear.children.concat(node.children);
+function cacheHit(hit, gear) {
+  // Cache gear lookup by hit ID
+  hits[hit.id] = gears[gear.uuid];
+}
 
-        // Set the parents on the new hits
-        for (var j=0; j < node.children.length; j++) {
-          node.children[j].parent = cacheGear;
-        }
-      }
-    } else if (node.type == "application") {
-      if (!application) {
-        root.push(node);
-        application = node;
-        redraw = true;
-      }
+function cacheGear(gear) {
+  var updated = false;
+
+  // Handle gear caching
+  if (!(gear.uuid in gears)) {
+    // Cache gear lookup by UUID
+    gears[gear.uuid] = gear;
+
+    // This might be a new gear that got created
+    if (application.children.indexOf(gear) < 0) {
+      // The application doesn't have this gear, add it
+      application.children.push(gear);
+      updated = true;
+    }
+  } else {
+    if (gear.children.length > 0) {
+      // Gear cache already exists, merge the hits
+      var cacheGear = gears[gear.uuid];
+      cacheGear.children = cacheGear.children.concat(gear.children);
+      updated = true;
     }
   }
 
-  // Now prune out any old hits
-  pruneRedraw = prune();
-
-  return redraw || pruneRedraw;
+  return updated;
 }
 
-/**
- * Returns a flattened list of all the nodes in the supplied
- * data with the sizes calculated.  Size is based on the total
- * hit count for the hierarchy below each object.
- *
- * @param data root JSON object to traverse and flatten
- * @returns {Array} the flattened array of nodes
- */
-function flatten(data) {
-    var nodes = [];
+function updateCache(data) {
+  var updated = false;
 
-    function recurse(parent, node) {
-        if (node.type == 'gear' || node.type == 'application') {
-          node.size = node.children.reduce(function(p, v) {return p + recurse(node, v); }, 0);
-        } else if (node.type == 'hit') {
-          node.size = node.count;
-        }
-      nodes.push(node);
-      return node.size;
+  // Update the application cache
+  if (!application) {
+    application = data;
+    updated = true;
+  }
+
+  // Update the gear cache
+  return process(cacheGear, cacheHit, data);
+}
+
+function calculateSizes() {
+  application.size = 0;
+
+  process(
+    function(gear) {
+      gear.size = 0;
+    },
+    function(hit, gear) {
+      hit.size = hit.count
+      gear.size += hit.size;
+      application.size += hit.size;
     }
-
-    data.size = recurse(null, data);
-
-    return nodes;
+  );
 }
 
-/**
- * Prunes the old hits off the root graph
- */
-function prune() {
-    var redraw = false;
-    for (var i = 0; i < root.length; i++) {
-        var node = root[i];
-        if (node.type == 'hit' and node.parent) {
-            // Remove node if the hit is more than 5 minutes old
-            var hitDate = new Date(node.timestamp);
-            var pruneDate = new Date(Date.now() - 1000*30*1);
-            if (pruneDate > hitDate) {
-              root.splice(root.indexOf(node), 1);
+// Flatten the structure into an array
+function flatten() {
+  var nodes = [];
 
-              // Also remove from the hierarchical graph
-              graph = node.parent.children;
-              graph.splice(graph.indexOf(node), 1);
-              redraw = true;
-            }
-        }
-    }
-    return redraw;
+  nodes.push(application);
+
+  process(
+    function(gear) { nodes.push(gear); },
+    function(hit) { nodes.push(hit); }
+  );
+
+  return nodes;
 }
-
 
 /**
  * Update the d3 force layout based on the root structure.
@@ -124,7 +185,11 @@ function update() {
       .attr("class", "link");
 
     // Exit any old links
-    link.exit().remove();
+    link.exit().transition()
+      .duration(1000)
+      .style("fill-opacity", 0)
+      .style("stroke-opacity", 0)
+      .remove();
 
     // Select all the groups
     groups = vis.selectAll("g")
@@ -141,12 +206,8 @@ function update() {
 
     // Set the hit's initial positioning to the gear center
     group.filter(function(d) { return d.type == "hit" })
-      .attr("cx", function(d) {
-        if (d.parent) return d.parent.x
-      })
-      .attr("cy", function(d) { 
-        if (d.parent) return d.parent.y
-      });
+      .attr("cx", function(d) { return hits[d.id].x; })
+      .attr("cy", function(d) { return hits[d.id].y; });
 
     // Label the gears and applications
     group.filter(function(d) { return d.type != "hit" })
@@ -158,7 +219,8 @@ function update() {
     // Exit any old nodes
     groups.exit().transition()
         .duration(1000)
-        .attr("r", 0)
+        .style("fill-opacity", 0)
+        .style("stroke-opacity", 0)
       .remove();
 
     // Update the circles to handle click events
@@ -233,9 +295,9 @@ function color(d) {
  */
 function linkDistance(d) {
   if (d.target.type == 'gear') {
-    return 400;
+    return 200;
   } else if (d.target.type == 'hit') {
-    return 20;
+    return 40;
   }
 }
 
@@ -249,9 +311,9 @@ function linkDistance(d) {
  */
 function linkStrength(d) {
   if (d.target.type == 'gear') {
-    return 0.1;
+    return 0.9;
   } else if (d.target.type == 'hit') {
-    return 0.5;
+    return 0.9;
   }
 }
 
@@ -290,11 +352,11 @@ function radius(d) {
  */
 function charge(d) {
     if (d.type == 'application') {
-      return -5000;
+      return -10;
     } else if (d.type == 'gear') {
-      return -400;
+      return -10;
     } else if (d.type == 'hit') {
-      return -400;
+      return -100;
     }
 }
 
@@ -403,18 +465,21 @@ function pollLocal(selection) {
 *------------------------- MAIN PROGRAM ------------------------------
 *---------------------------------------------------------------------
 */
-var w = 1500, h = 900, link, root = [], application, gears = {};
+var w = 1500, h = 900, link, root = [], application, gears = {}, hits = {};
 
 // The time from which to start retrieving results
 var time = 0;
+
+// The amount of time before pruning hits
+var pruneTime = 2;
 
 // Build a force layout
 var force = d3.layout.force()
       .on("tick", tick)
       .linkDistance(linkDistance)
       .linkStrength(linkStrength)
-      .friction(0.5)
-      .gravity(0.8)
+      .friction(0.7)
+      .gravity(0.2)
       .charge(charge)
       .size([ w, h ]);
 
