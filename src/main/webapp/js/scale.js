@@ -244,7 +244,7 @@ function radius(d) {
  */
 function charge(d) {
     if (d.type == 'application') {
-      return -100;
+      return -200;
     } else if (d.type == 'gear') {
       return -200;
     } else if (d.type == 'hit') {
