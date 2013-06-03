@@ -246,9 +246,9 @@ function charge(d) {
     if (d.type == 'application') {
       return 0;
     } else if (d.type == 'gear') {
-      return -500;
+      return -200;
     } else if (d.type == 'hit') {
-      return -75;
+      return -200;
     }
 }
 
@@ -357,7 +357,7 @@ function pollLocal(selection) {
 *------------------------- MAIN PROGRAM ------------------------------
 *---------------------------------------------------------------------
 */
-var w = 960, h = 600, link, root = [], application, gears = {};
+var w = 1500, h = 900, link, root = [], application, gears = {};
 
 // The time from which to start retrieving results
 var time = 0;
