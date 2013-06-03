@@ -10,9 +10,6 @@ function merge(data) {
   // First, flatten the data structure
   var nodes = flatten(data);
 
-  // Now prune out any old hits
-  prune(data);
-
   // Merge new data, ignoring gear and application updates
   // since the updates will overwrite their x & y coordinate
   // and cause the graph to destabilize
@@ -53,7 +50,11 @@ function merge(data) {
       }
     }
   }
-  return redraw;
+
+  // Now prune out any old hits
+  pruneRedraw = prune();
+
+  return redraw || pruneRedraw;
 }
 
 /**
@@ -83,21 +84,22 @@ function flatten(data) {
 }
 
 /**
- * Prunes the old hits off the graph
+ * Prunes the old hits off the root graph
  */
-function prune(data) {
-    function recurse(node) {
+function prune() {
+    var redraw = false;
+    for (var i = 0; i < root.length; i++) {
         if (node.type == 'hit') {
-          // Remove node if the hit is more than 5 minutes old
-          var hitDate = new Date(node.timestamp);
-          var pruneDate = new Date(Date.now() - 1000*30*1);
-          if (pruneDate > hitDate) {
-            data.splice(data.indexOf(node), 1);
-          }
+            // Remove node if the hit is more than 5 minutes old
+            var hitDate = new Date(node.timestamp);
+            var pruneDate = new Date(Date.now() - 1000*30*1);
+            if (pruneDate > hitDate) {
+              data.splice(data.indexOf(node), 1);
+              redraw = true;
+            }
         }
     }
-
-    recurse(data);
+    return redraw;
 }
 
 
