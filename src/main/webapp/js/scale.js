@@ -205,7 +205,7 @@ function linkStrength(d) {
   if (d.target.type == 'gear') {
     return 0.9;
   } else if (d.target.type == 'hit') {
-    return 1.0;
+    return 0.7;
   }
 }
 
@@ -244,7 +244,7 @@ function radius(d) {
  */
 function charge(d) {
     if (d.type == 'application') {
-      return 0;
+      return -100;
     } else if (d.type == 'gear') {
       return -200;
     } else if (d.type == 'hit') {
