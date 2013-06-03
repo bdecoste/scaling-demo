@@ -89,12 +89,13 @@ function flatten(data) {
 function prune() {
     var redraw = false;
     for (var i = 0; i < root.length; i++) {
+        var node = root[i];
         if (node.type == 'hit') {
             // Remove node if the hit is more than 5 minutes old
             var hitDate = new Date(node.timestamp);
             var pruneDate = new Date(Date.now() - 1000*30*1);
             if (pruneDate > hitDate) {
-              data.splice(data.indexOf(node), 1);
+              root.splice(root.indexOf(node), 1);
               redraw = true;
             }
         }
