@@ -134,8 +134,12 @@ function update() {
 
     // Set the hit's initial positioning to the gear center
     group.filter(function(d) { return d.type == "hit" })
-      .attr("cx", function(d) { return d.parent.x })
-      .attr("cy", function(d) { return d.parent.y });
+      .attr("cx", function(d) {
+        if (d.parent) return d.parent.x
+      })
+      .attr("cy", function(d) { 
+        if (d.parent) return d.parent.y
+      });
 
     // Label the gears and applications
     group.filter(function(d) { return d.type != "hit" })
