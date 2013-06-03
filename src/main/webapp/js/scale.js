@@ -10,6 +10,9 @@ function merge(data) {
   // First, flatten the data structure
   var nodes = flatten(data);
 
+  // Now prune out any old hits
+  prune(data);
+
   // Merge new data, ignoring gear and application updates
   // since the updates will overwrite their x & y coordinate
   // and cause the graph to destabilize
@@ -80,6 +83,25 @@ function flatten(data) {
 }
 
 /**
+ * Prunes the old hits off the graph
+ */
+function prune(data) {
+    function recurse(node) {
+        if (node.type == 'hit') {
+          // Remove node if the hit is more than 5 minutes old
+          var hitDate = new Date(node.timestamp);
+          var pruneDate = new Date(Date.now() - 1000*30*1);
+          if (pruneDate > hitDate) {
+            data.splice(data.indexOf(node), 1);
+          }
+        }
+    }
+
+    recurse(data);
+}
+
+
+/**
  * Update the d3 force layout based on the root structure.
  */
 function update() {
@@ -123,7 +145,10 @@ function update() {
         .text(function(d) { return d.type == "application" ? "App": "Gear" });
 
     // Exit any old nodes
-    groups.exit().remove();
+    groups.exit().transition()
+        .duration(1000)
+        .attr("r", 0)
+      .remove();
 
     // Update the circles to handle click events
     // that change color / radius
