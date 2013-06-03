@@ -90,12 +90,16 @@ function prune() {
     var redraw = false;
     for (var i = 0; i < root.length; i++) {
         var node = root[i];
-        if (node.type == 'hit') {
+        if (node.type == 'hit' and node.parent) {
             // Remove node if the hit is more than 5 minutes old
             var hitDate = new Date(node.timestamp);
             var pruneDate = new Date(Date.now() - 1000*30*1);
             if (pruneDate > hitDate) {
               root.splice(root.indexOf(node), 1);
+
+              // Also remove from the hierarchical graph
+              graph = node.parent.children;
+              graph.splice(graph.indexOf(node), 1);
               redraw = true;
             }
         }
