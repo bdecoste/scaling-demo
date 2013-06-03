@@ -23,19 +23,24 @@ function merge(data) {
       if (!(node.uuid in gears)) {
         root.push(node);
         // Cache the gear
-          gears[node.uuid] = node;
-          if (application) {
-            // This might be a new gear that got created
-            if (application.children.indexOf(node) < 0) {
-              // The application doesn't have this gear, add it
-              application.children.push(node);
-            }
+        gears[node.uuid] = node;
+        if (application) {
+          // This might be a new gear that got created
+          if (application.children.indexOf(node) < 0) {
+            // The application doesn't have this gear, add it
+            application.children.push(node);
           }
-          redraw = true;
+        }
+        redraw = true;
       } else {
         // Merge the hits
         var cacheGear = gears[node.uuid];
         cacheGear.children = cacheGear.children.concat(node.children);
+
+        // Set the parents on the new hits
+        for (var j=0; j < node.children.length; j++) {
+          node.children[j].parent = cacheGear;
+        }
       }
     } else if (node.type == "application") {
       if (!application) {
@@ -64,7 +69,6 @@ function flatten(data) {
           node.size = node.children.reduce(function(p, v) {return p + recurse(node, v); }, 0);
         } else if (node.type == 'hit') {
           node.size = node.count;
-          node.parent = parent;
         }
       nodes.push(node);
       return node.size;
