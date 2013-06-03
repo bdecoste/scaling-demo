@@ -59,17 +59,18 @@ function merge(data) {
 function flatten(data) {
     var nodes = [];
 
-    function recurse(node) {
-      if (node.type == 'gear' || node.type == 'application') {
-        node.size = node.children.reduce(function(p, v) {return p + recurse(v); }, 0);
-      } else if (node.type == 'hit') {
-        node.size = node.count;
-      }
-    nodes.push(node);
-    return node.size;
-  }
+    function recurse(parent, node) {
+        if (node.type == 'gear' || node.type == 'application') {
+          node.size = node.children.reduce(function(p, v) {return p + recurse(node, v); }, 0);
+        } else if (node.type == 'hit') {
+          node.size = node.count;
+          node.parent = parent;
+        }
+      nodes.push(node);
+      return node.size;
+    }
 
-    data.size = recurse(data);
+    data.size = recurse(null, data);
 
     return nodes;
 }
@@ -104,6 +105,11 @@ function update() {
 
     // Append circles to the wrapper
     group.append("circle");
+
+    // Set the hit's initial positioning to the gear center
+    group.filter(function(d) { return d.type == "hit" })
+      .attr("cx", function(d) { return d.parent.x })
+      .attr("cy", function(d) { return d.parent.y });
 
     // Label the gears and applications
     group.filter(function(d) { return d.type != "hit" })
@@ -367,7 +373,7 @@ var force = d3.layout.force()
       .on("tick", tick)
       .linkDistance(linkDistance)
       .linkStrength(linkStrength)
-      .friction(0.7)
+      .friction(0.5)
       .gravity(0.8)
       .charge(charge)
       .size([ w, h ]);
