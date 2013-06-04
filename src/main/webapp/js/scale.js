@@ -295,9 +295,9 @@ function color(d) {
  */
 function linkDistance(d) {
   if (d.target.type == 'gear') {
-    return 200;
+    return 150;
   } else if (d.target.type == 'hit') {
-    return 40;
+    return 50;
   }
 }
 
@@ -354,9 +354,9 @@ function charge(d) {
     if (d.type == 'application') {
       return -10;
     } else if (d.type == 'gear') {
-      return -10;
+      return -25;
     } else if (d.type == 'hit') {
-      return -100;
+      return -25;
     }
 }
 
@@ -478,7 +478,7 @@ var force = d3.layout.force()
       .on("tick", tick)
       .linkDistance(linkDistance)
       .linkStrength(linkStrength)
-      .friction(0.7)
+      .friction(0.9)
       .gravity(0.2)
       .charge(charge)
       .size([ w, h ]);
