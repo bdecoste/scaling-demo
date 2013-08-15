@@ -1,7 +1,7 @@
 package org.cloudydemo;
 
-import java.net.UnknownHostException;
 import java.util.Date;
+import java.util.List;
 import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
@@ -9,24 +9,22 @@ import javax.ejb.Schedule;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.ejb.Timeout;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 
-import org.bson.types.ObjectId;
 import org.cloudydemo.model.Application;
 import org.cloudydemo.model.Gear;
 import org.cloudydemo.model.Hit;
-
-import com.mongodb.BasicDBObject;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.DBCursor;
-import com.mongodb.DBObject;
-import com.mongodb.Mongo;
+import org.cloudydemo.model.HitEntry;
 
 @Startup
 @Singleton
 public class HitTracker {
-	private Mongo mongo;
-	private DB mongoDB;
+	@PersistenceContext
+	private EntityManager em;
 
 	private static final Logger LOGGER = Logger.getLogger(HitTracker.class
 			.getName());
@@ -40,32 +38,10 @@ public class HitTracker {
 	// The application name
 	private String appName;
 
-	private final String COLLECTION = "hitTracker";
-
 	@PostConstruct
 	void initialize() {
-		String host = System.getenv("OPENSHIFT_MONGODB_DB_HOST");
-		String user = System.getenv("OPENSHIFT_MONGODB_DB_USERNAME");
-		String password = System.getenv("OPENSHIFT_MONGODB_DB_PASSWORD");
-		int port = Integer.decode(System.getenv("OPENSHIFT_MONGODB_DB_PORT"));
 		gearId = System.getenv("OPENSHIFT_GEAR_UUID");
 		appName = System.getenv("OPENSHIFT_APP_NAME");
-
-		LOGGER.fine("Connecting with host = " + host + " / port = " + port);
-
-		try {
-			mongo = new Mongo(host, port);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
-		mongoDB = mongo.getDB(System.getenv("OPENSHIFT_APP_NAME"));
-		if (user != null && password != null) {
-			if (mongoDB.authenticate(user, password.toCharArray()) == false) {
-				throw new RuntimeException("Mongo authentication failed");
-			}
-		} else {
-			LOGGER.warning("No username / password given so not authenticating with Mongo");
-		}
 	}
 
 	public Application displayHitsSince(long time) {
@@ -73,46 +49,32 @@ public class HitTracker {
 
 		Application app = new Application(appName);
 
-		try {
-			mongoDB.requestStart();
-			DBCollection coll = mongoDB.getCollection(COLLECTION);
+		CriteriaBuilder builder = em.getCriteriaBuilder();
+		CriteriaQuery<HitEntry> criteria = builder.createQuery(HitEntry.class);
+		Root<HitEntry> hitEntry = criteria.from(HitEntry.class);
+		Date fromDate = new Date(time);
+		criteria.where(builder.greaterThan(hitEntry.<Date> get("time"),
+				fromDate));
+		List<HitEntry> results = em.createQuery(criteria).getResultList();
 
-			BasicDBObject query = new BasicDBObject("time", new BasicDBObject(
-					"$gt", time));
-			DBCursor cur = coll.find(query);
+		for (HitEntry result : results) {
+			String gearId = result.getGearId();
 
-			try {
-				while (cur.hasNext()) {
-					DBObject result = cur.next();
-
-					String gearId = (String) result.get("gear");
-
-					// Get or create the gear for the application
-					Gear gear = new Gear(gearId);
-					if (!app.getChildren().contains(gear)) {
-						app.getChildren().add(gear);
-					} else {
-						int index = app.getChildren().indexOf(gear);
-						gear = app.getChildren().get(index);
-					}
-
-					String id = ((ObjectId) result.get("_id")).toString();
-					Date timestamp = new Date(
-							((Long) result.get("time")).longValue());
-					Integer hits = (Integer) result.get("hits");
-
-					// Add the hits and timestamp to the gear
-					gear.getChildren().add(
-							new Hit(id, timestamp, hits.intValue()));
-				}
-			} finally {
-				cur.close();
+			// Get or create the gear for the application
+			Gear gear = new Gear(gearId);
+			if (!app.getChildren().contains(gear)) {
+				app.getChildren().add(gear);
+			} else {
+				int index = app.getChildren().indexOf(gear);
+				gear = app.getChildren().get(index);
 			}
-		} catch (Exception e) {
-			// Try and re-establish the Mongo connection
-			initialize();
-		} finally {
-			mongoDB.requestDone();
+
+			String id = result.getId().toString();
+			Date timestamp = result.getTime();
+			int hits = result.getHits();
+
+			// Add the hits and timestamp to the gear
+			gear.getChildren().add(new Hit(id, timestamp, hits));
 		}
 
 		LOGGER.fine("Application = " + app);
@@ -128,26 +90,17 @@ public class HitTracker {
 		if (hits > 0) {
 			LOGGER.fine("Persisting " + hits + " to Mongo for gear " + gearId);
 
-			try {
-				mongoDB.requestStart();
-
-				DBCollection coll = mongoDB.getCollection(COLLECTION);
-
-				BasicDBObject doc = new BasicDBObject();
-				doc.put("gear", gearId);
-				doc.put("hits", hits);
-				doc.put("time", System.currentTimeMillis());
-
-				coll.insert(doc);
-				
-				// Reset the hit counter
-				hits = 0;
-			} finally {
-				mongoDB.requestDone();
-			}
+			HitEntry hitEntry = new HitEntry();
+			hitEntry.setGearId(gearId);
+			hitEntry.setHits(hits);
+			hitEntry.setTime(new Date());
+			
+			em.persist(hitEntry);
 		}
+		
+		hits = 0;
 	}
-	
+
 	@Timeout
 	public void timed() {
 		// Just created to handle timeouts on the schedule calls
